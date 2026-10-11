@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,6 +21,7 @@ class WorkflowStep:
 class WorkflowResult:
     outputs: dict[str, str]
     errors: dict[str, str]
+    elapsed_seconds: dict[str, float]
 
 
 def parse_workflow(data: dict[str, Any]) -> list[WorkflowStep]:
@@ -65,6 +67,7 @@ def parse_workflow(data: dict[str, Any]) -> list[WorkflowStep]:
 def execute_workflow(provider: Any, steps: list[WorkflowStep], max_workers: int = 2) -> WorkflowResult:
     outputs: dict[str, str] = {}
     errors: dict[str, str] = {}
+    elapsed_seconds: dict[str, float] = {}
     remaining = {step.id: step for step in steps}
     while remaining:
         ready = [step for step in remaining.values()
@@ -85,9 +88,11 @@ def execute_workflow(provider: Any, steps: list[WorkflowStep], max_workers: int 
             for future in as_completed(futures):
                 step = futures[future]
                 try:
-                    step_id, result = future.result()
+                    step_id, result, elapsed = future.result()
                     outputs[step_id] = result
+                    elapsed_seconds[step_id] = elapsed
                 except Exception as exc:
                     errors[step.id] = str(exc)
+                    elapsed_seconds[step.id] = max(0.0, time.monotonic() - started) if "started" in locals() else 0.0
                 remaining.pop(step.id, None)
-    return WorkflowResult(outputs, errors)
+    return WorkflowResult(outputs, errors, elapsed_seconds)
