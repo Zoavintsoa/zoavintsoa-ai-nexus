@@ -23,6 +23,8 @@ class WorkflowResult:
 
 
 def parse_workflow(data: dict[str, Any]) -> list[WorkflowStep]:
+    if not isinstance(data, dict):
+        raise ValueError("Workflow document must be a JSON object.")
     raw_steps = data.get("steps")
     if not isinstance(raw_steps, list) or not raw_steps:
         raise ValueError("Workflow must contain a non-empty 'steps' array.")
