@@ -8,6 +8,8 @@ from nexus.router import classify_task
 
 
 def parse_benchmark(data: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(data, dict):
+        raise ValueError("Benchmark document must be a JSON object.")
     tasks = data.get("tasks")
     if not isinstance(tasks, list) or not tasks:
         raise ValueError("Benchmark file must contain a non-empty 'tasks' array.")
