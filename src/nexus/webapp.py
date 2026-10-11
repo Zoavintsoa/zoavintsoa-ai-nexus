@@ -143,7 +143,9 @@ def create_handler(token: str):
                     return self._json(200, {"items": store.get_profiles(settings.provider)})
                 self._json(404, {"error": "Unknown API endpoint."})
             except Exception as exc:
-                self._json(503, {"error": str(exc), "kind": type(exc).__name__})
+                # Keep provider diagnostics and local filesystem details out of browser responses.
+                self._json(503, {"error": "The request failed. Check that the configured AI provider is running and correctly configured.",
+                                 "kind": type(exc).__name__})
         def do_POST(self) -> None:
             if not self._local_request():
                 self._json(421, {"error": "This dashboard accepts requests only from its local address."})
