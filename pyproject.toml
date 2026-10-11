@@ -14,9 +14,12 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+desktop = ["pywebview>=5.0", "pyinstaller>=6.0"]
 
 [project.scripts]
 nexus = "nexus.cli:main"
+nexus-gui = "nexus.webapp:main"
+nexus-desktop = "nexus.desktop:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
