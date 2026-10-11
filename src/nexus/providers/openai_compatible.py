@@ -11,10 +11,12 @@ class OpenAICompatibleClient:
     """Connect to servers such as llama.cpp, LM Studio, or LocalAI when configured."""
 
     def __init__(self, host: str = "http://127.0.0.1:1234/v1",
-                 timeout: float = 120.0, api_key: str | None = None):
+                 timeout: float = 120.0, api_key: str | None = None,
+                 max_output_tokens: int = 2048):
         self.host = host.rstrip("/")
         self.timeout = timeout
         self.api_key = api_key if api_key is not None else os.getenv("NEXUS_OPENAI_COMPAT_API_KEY")
+        self.max_output_tokens = max(1, min(int(max_output_tokens), 32768))
 
     def _request(self, path: str, payload: dict | None = None) -> dict:
         return request_json(self.host, path, self.timeout, payload, self.api_key)
@@ -41,6 +43,7 @@ class OpenAICompatibleClient:
         messages.append({"role": "user", "content": prompt})
         data = self._request("/chat/completions", {
             "model": model, "messages": messages, "stream": False,
+            "max_tokens": self.max_output_tokens,
         })
         choices = data.get("choices", [])
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
