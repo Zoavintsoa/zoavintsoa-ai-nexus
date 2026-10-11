@@ -38,14 +38,14 @@ class StateStore:
         return db
 
     def save_profiles(self, provider: str, profiles: list[dict[str, Any]]) -> None:
+        rows = [(provider, str(item["name"]), json.dumps(item, ensure_ascii=False))
+                for item in profiles if item.get("name")]
         with self._connect() as db:
+            # A sync is a snapshot: remove stale models that are no longer installed.
+            db.execute("DELETE FROM model_profiles WHERE provider=?", (provider,))
             db.executemany(
                 """INSERT INTO model_profiles(provider,name,profile_json,updated_at)
-                VALUES(?,?,?,CURRENT_TIMESTAMP)
-                ON CONFLICT(provider,name) DO UPDATE SET
-                profile_json=excluded.profile_json, updated_at=CURRENT_TIMESTAMP""",
-                [(provider, str(item["name"]), json.dumps(item, ensure_ascii=False))
-                 for item in profiles if item.get("name")],
+                VALUES(?,?,?,CURRENT_TIMESTAMP)""", rows,
             )
 
     def get_profiles(self, provider: str | None = None) -> list[dict[str, Any]]:
