@@ -6,9 +6,11 @@ from nexus.http_client import request_json
 
 
 class OllamaClient:
-    def __init__(self, host: str = "http://127.0.0.1:11434", timeout: float = 120.0):
+    def __init__(self, host: str = "http://127.0.0.1:11434", timeout: float = 120.0,
+                 max_output_tokens: int = 2048):
         self.host = host.rstrip("/")
         self.timeout = timeout
+        self.max_output_tokens = max(1, min(int(max_output_tokens), 32768))
 
     def _request(self, path: str, payload: dict | None = None) -> dict:
         return request_json(self.host, path, self.timeout, payload)
@@ -41,7 +43,10 @@ class OllamaClient:
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        data = self._request("/api/chat", {"model": model, "messages": messages, "stream": False})
+        data = self._request("/api/chat", {
+            "model": model, "messages": messages, "stream": False,
+            "options": {"num_predict": self.max_output_tokens},
+        })
         message = data.get("message", {})
         content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, str):
