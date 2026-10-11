@@ -2,70 +2,88 @@
 
 **A local-first, multi-model AI orchestration platform by Zoavintsoa.**
 
-AI Nexus coordinates available local models so they can contribute to one task, compare approaches, and produce a synthesized answer. It does not merge model weights: it orchestrates separate inference engines through adapters.
+AI Nexus coordinates separate local inference engines so multiple models can contribute to one task, compare approaches, and produce a synthesis. It does not merge model weights.
 
 ## Current foundation
 
-- Ollama provider adapter using Python's standard library.
-- Connection diagnostics and model discovery.
-- Model inventory based on provider-reported family, parameter size, quantization, and capabilities.
-- Multi-model collaboration with bounded parallel execution.
-- Individual model failures are reported rather than silently discarded.
-- CLI interface and GitHub Actions workflow.
+- Ollama provider with model discovery and detailed metadata inventory.
+- OpenAI-compatible provider adapter for compatible local inference servers.
+- Single-model prompts and bounded multi-model collaboration.
+- Individual model failures remain visible.
+- JSON export for the Ollama inventory.
+- CLI, documentation, and GitHub Actions workflow.
 - No runtime Python dependencies.
 
-> Early foundation: this is a development prototype, not a production-ready autonomous agent. Model agreement is not proof of correctness. Changes in this iteration have not been run through tests, as requested.
+> This is an early development prototype, not a production-ready autonomous agent. The latest changes have not been tested, as requested.
 
 ## Requirements
 
 - Python 3.11 or newer
-- [Ollama](https://ollama.com/) running locally
-- At least one model pulled in Ollama
+- Ollama, or a server exposing an OpenAI-compatible API
+- At least one model available from the selected provider
 
-## Quick start
-
-From the repository directory:
+## Install
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
+```
+
+## Ollama quick start
+
+```bash
 nexus doctor
 nexus models
 nexus inventory
 nexus inventory --json
-nexus ask --model qwen3-vl:8b "Explain what a local AI orchestrator does."
+nexus ask --model qwen3-vl:8b "Explain local AI orchestration."
+nexus collaborate --models qwen3-vl:8b,another-model:latest "Compare two project architectures."
 ```
 
-Collaborate with two or more installed models:
+Replace example model names with the exact names printed by `nexus models`.
+
+## OpenAI-compatible server
+
+Set these environment variables before running the CLI:
 
 ```bash
-nexus collaborate --models qwen3-vl:8b,another-model:latest "Compare two ways to organize a small Python project."
+export NEXUS_PROVIDER=openai-compatible
+export NEXUS_OPENAI_COMPAT_HOST=http://127.0.0.1:1234/v1
+# Set only if the server requires authentication:
+# export NEXUS_OPENAI_COMPAT_API_KEY=your-local-server-key
+nexus doctor
+nexus models
+nexus ask --model your-model-id "Hello"
 ```
 
-Replace model names with names shown by `nexus models`. The `inventory` command reports metadata returned by Ollama; it does not claim that reported capabilities guarantee quality or accuracy.
+This adapter may work with compatible configurations of LM Studio, llama.cpp server, or LocalAI. Actual compatibility depends on the server and its enabled API endpoints.
 
 ## Configuration
 
-- `OLLAMA_HOST`: Ollama base URL; defaults to `http://127.0.0.1:11434`.
-- `NEXUS_MAX_WORKERS`: maximum simultaneous model requests; defaults to `2`.
-- `NEXUS_REQUEST_TIMEOUT`: per-request timeout in seconds; defaults to `120`, capped at `600`.
+- `NEXUS_PROVIDER`: `ollama` (default) or `openai-compatible`.
+- `OLLAMA_HOST`: default `http://127.0.0.1:11434`.
+- `NEXUS_OPENAI_COMPAT_HOST`: default `http://127.0.0.1:1234/v1`.
+- `NEXUS_OPENAI_COMPAT_API_KEY`: optional key for compatible servers.
+- `NEXUS_MAX_WORKERS`: parallel model requests, bounded from 1 to 8.
+- `NEXUS_REQUEST_TIMEOUT`: per-request timeout in seconds, bounded from 1 to 600.
 
-## Project principles
+## Principles and limits
 
-1. Local-first and privacy-conscious.
-2. Provider-neutral architecture.
-3. Explicit resource limits.
-4. Transparent errors and traceable contributions.
-5. External verification where possible; model consensus is not verification.
-6. No arbitrary shell execution or file mutation in the initial MVP.
+1. Local-first; keep inference endpoints private unless remote access is deliberately secured.
+2. Provider-neutral orchestration and explicit concurrency limits.
+3. Transparent attribution of model contributions and failures.
+4. Provider-reported capabilities are metadata, not proof of quality.
+5. Model agreement is not verification.
+6. No arbitrary shell execution or automatic destructive file changes in the initial MVP.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
+- [Provider setup](docs/PROVIDERS.md)
 - [Model registry](docs/MODEL_REGISTRY.md)
-- [Security notes](docs/SECURITY.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Security](docs/SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## License
