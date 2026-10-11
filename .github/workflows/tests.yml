@@ -1,8 +1,7 @@
 name: Tests
 
+# Manual only for now: no automated test runs are triggered by pushes or pull requests.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
