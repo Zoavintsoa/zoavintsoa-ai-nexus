@@ -324,13 +324,27 @@ def main(argv: list[str] | None = None) -> int:
                     for step in steps
                 ], indent=2, ensure_ascii=False))
                 return 0
-            result = execute_workflow(client, steps, settings.max_workers)
-            print(json.dumps({"outputs": result.outputs, "errors": result.errors},
-                             indent=2, ensure_ascii=False))
+            profiles_data = _profile_dicts(client, settings.provider)
+            if isinstance(client, OllamaClient):
+                _store_profiles(settings.provider, profiles_data)
+            plan = plan_resources([step.model for step in steps], profiles_data,
+                                  settings.max_workers, settings.memory_budget_fraction)
+            for warning in plan.warnings:
+                print(f"Resource warning: {warning}", file=sys.stderr)
+            result = execute_workflow(client, steps, plan.recommended_workers)
+            for step in steps:
+                _record_run(settings.provider, step.model, step.prompt,
+                            result.elapsed_seconds.get(step.id, 0.0), step.id in result.outputs)
+            print(json.dumps({
+                "outputs": result.outputs, "errors": result.errors,
+                "elapsed_seconds": result.elapsed_seconds,
+                "recommended_workers": plan.recommended_workers,
+            }, indent=2, ensure_ascii=False))
             if args.session_out:
                 export_session(args.session_out, "workflow:" + str(args.file), settings.provider,
                                [step.model for step in steps],
-                               {"outputs": result.outputs, "errors": result.errors})
+                               {"outputs": result.outputs, "errors": result.errors,
+                                "elapsed_seconds": result.elapsed_seconds})
                 print(f"Session exported: {Path(args.session_out).expanduser()}")
             return 0 if not result.errors else 2
         if args.command == "session" and args.session_command == "show":
