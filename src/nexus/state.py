@@ -1,4 +1,4 @@
-"""Small SQLite store for opt-in local model profiles and run telemetry."""
+"""Small SQLite store for local model profiles and run telemetry."""
 from __future__ import annotations
 
 import json
