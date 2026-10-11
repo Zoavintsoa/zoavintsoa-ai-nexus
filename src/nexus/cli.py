@@ -100,7 +100,11 @@ def main(argv: list[str] | None = None) -> int:
             result = Orchestrator(client, settings.max_workers).collaborate(models, args.prompt)
             for contribution in result.contributions:
                 status = "OK" if contribution.succeeded else "FAILED"
-                print(f"\n[{status}] {contribution.model}")
+                elapsed = (
+                    f" — {contribution.latency_seconds:.2f}s"
+                    if contribution.latency_seconds is not None else ""
+                )
+                print(f"\n[{status}] {contribution.model}{elapsed}")
                 print(contribution.content if contribution.succeeded else contribution.error)
             print("\n=== SYNTHESIS ===\n")
             print(result.synthesis)
