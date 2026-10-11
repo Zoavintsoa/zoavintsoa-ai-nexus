@@ -13,6 +13,7 @@ This project is an early prototype. Treat all model output as untrusted data.
 - Session exports and benchmark reports can include prompts and complete model outputs. Export only to locations you trust and protect those files as private.
 - Workflow dependency outputs are inserted into later prompts as untrusted context. Model output is never interpreted as a command.
 - The CLI does not execute model-generated shell commands or edit user files automatically.
+- The local dashboard binds to loopback only, requires a random per-process API token, validates local `Host`/`Origin` headers to mitigate DNS-rebinding and cross-origin requests, and avoids returning raw internal exception messages to the browser.
 
 ## Planned safeguards
 
