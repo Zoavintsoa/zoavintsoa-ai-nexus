@@ -4,33 +4,42 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from typing import Any
 
 from nexus.config import Settings
 from nexus.errors import NexusError
 from nexus.inventory import inventory
 from nexus.orchestrator import Orchestrator
 from nexus.providers.ollama import OllamaClient
+from nexus.providers.openai_compatible import OpenAICompatibleClient
 
 
-def _client() -> OllamaClient:
+def _client() -> Any:
     settings = Settings.from_env()
+    if settings.provider == "openai-compatible":
+        return OpenAICompatibleClient(settings.compatible_host, settings.request_timeout)
     return OllamaClient(settings.ollama_host, settings.request_timeout)
 
 
-def _print_models(client: OllamaClient) -> int:
+def _print_models(client: Any) -> int:
     models = client.list_models()
     if not models:
-        print("No Ollama models found. Pull a model with: ollama pull <model>")
+        print("No models found for the configured provider.")
         return 0
     for item in models:
         name = item.get("name", "(unnamed)")
         size = item.get("size")
         size_text = f" ({size / 1_000_000_000:.1f} GB)" if isinstance(size, (int, float)) else ""
-        print(f"- {name}{size_text}")
+        owner = item.get("provider")
+        owner_text = f" [{owner}]" if isinstance(owner, str) and owner else ""
+        print(f"- {name}{size_text}{owner_text}")
     return 0
 
 
-def _print_inventory(client: OllamaClient, as_json: bool = False) -> int:
+def _print_inventory(client: Any, as_json: bool = False) -> int:
+    if not isinstance(client, OllamaClient):
+        print("Detailed inventory is currently available for Ollama only.", file=sys.stderr)
+        return 2
     profiles = inventory(client)
     if as_json:
         print(json.dumps([profile.to_dict() for profile in profiles], indent=2, ensure_ascii=False))
@@ -56,11 +65,11 @@ def _print_inventory(client: OllamaClient, as_json: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="nexus", description="Zoavintsoa AI Nexus")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("doctor", help="Check connection to Ollama")
-    sub.add_parser("models", help="List locally available Ollama models")
+    sub.add_parser("doctor", help="Check connection to the configured provider")
+    sub.add_parser("models", help="List models available from the configured provider")
     inventory_parser = sub.add_parser("inventory", help="Show provider-reported model metadata")
     inventory_parser.add_argument("--json", action="store_true", help="Output inventory as JSON")
-    ask = sub.add_parser("ask", help="Ask one local model")
+    ask = sub.add_parser("ask", help="Ask one model from the configured provider")
     ask.add_argument("--model", required=True)
     ask.add_argument("prompt")
     collab = sub.add_parser("collaborate", help="Ask several models and synthesize their contributions")
@@ -68,12 +77,16 @@ def main(argv: list[str] | None = None) -> int:
     collab.add_argument("prompt")
     args = parser.parse_args(argv)
     client = _client()
+    settings = Settings.from_env()
 
     try:
         if args.command == "doctor":
-            print(f"Ollama reachable: {client.host}")
-            print(f"Ollama version: {client.version()}")
-            print(f"Models installed: {len(client.list_models())}")
+            models = client.list_models()
+            print(f"Provider: {settings.provider}")
+            print(f"Endpoint: {client.host}")
+            if isinstance(client, OllamaClient):
+                print(f"Ollama version: {client.version()}")
+            print(f"Models available: {len(models)}")
             return 0
         if args.command == "models":
             return _print_models(client)
@@ -83,7 +96,6 @@ def main(argv: list[str] | None = None) -> int:
             print(client.chat(args.model, args.prompt))
             return 0
         if args.command == "collaborate":
-            settings = Settings.from_env()
             models = [name.strip() for name in args.models.split(",") if name.strip()]
             result = Orchestrator(client, settings.max_workers).collaborate(models, args.prompt)
             for contribution in result.contributions:
