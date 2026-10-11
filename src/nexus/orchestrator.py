@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import Protocol
 
-from nexus.errors import ProviderError
 
 
 class ChatProvider(Protocol):
@@ -78,7 +77,9 @@ class Orchestrator:
         successful = [item for item in contributions if item.succeeded]
         if not successful:
             details = "; ".join(f"{item.model}: {item.error}" for item in contributions)
-            raise ProviderError("All model requests failed. " + details)
+            return CollaborationResult(
+                tuple(contributions), "No successful model contributions. " + details
+            )
 
         sections = [
             f"### Contribution from {item.model}\n{item.content}" for item in successful
