@@ -1,0 +1,14 @@
+{
+  "tasks": [
+    {
+      "id": "reasoning-baseline",
+      "prompt": "Compare sequential and parallel execution. Give three trade-offs.",
+      "models": ["qwen3-vl:8b"]
+    },
+    {
+      "id": "structured-output",
+      "prompt": "Return a numbered list of five practical safeguards for a local AI application.",
+      "models": ["qwen3-vl:8b"]
+    }
+  ]
+}
