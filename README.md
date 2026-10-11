@@ -6,12 +6,13 @@ AI Nexus coordinates separate local inference engines so multiple models can con
 
 ## Current foundation
 
-- Ollama provider with model discovery and detailed metadata inventory.
+- Ollama provider with model discovery and provider-reported model metadata.
 - OpenAI-compatible provider adapter for compatible local inference servers.
 - Single-model prompts and bounded multi-model collaboration.
-- Individual model failures remain visible.
+- Individual model failures remain visible; collaboration reports per-model elapsed time.
+- Shared JSON HTTP layer with request IDs and bounded retries for transient failures.
 - JSON export for the Ollama inventory.
-- CLI, documentation, and GitHub Actions workflow.
+- CLI, documentation, and a manually triggered GitHub Actions workflow.
 - No runtime Python dependencies.
 
 > This is an early development prototype, not a production-ready autonomous agent. The latest changes have not been tested, as requested.
@@ -67,15 +68,16 @@ This adapter may work with compatible configurations of LM Studio, llama.cpp ser
 - `NEXUS_OPENAI_COMPAT_API_KEY`: optional key for compatible servers.
 - `NEXUS_MAX_WORKERS`: parallel model requests, bounded from 1 to 8.
 - `NEXUS_REQUEST_TIMEOUT`: per-request timeout in seconds, bounded from 1 to 600.
+- HTTP requests make up to three attempts for transient network errors, HTTP 408/425/429 and HTTP 5xx responses, with short exponential backoff. Ordinary client errors are not retried.
 
-## Principles and limits
+## Reliability and security notes
 
-1. Local-first; keep inference endpoints private unless remote access is deliberately secured.
-2. Provider-neutral orchestration and explicit concurrency limits.
-3. Transparent attribution of model contributions and failures.
-4. Provider-reported capabilities are metadata, not proof of quality.
-5. Model agreement is not verification.
-6. No arbitrary shell execution or automatic destructive file changes in the initial MVP.
+- A request ID is sent with each HTTP request. Warning logs describe transient failures without recording prompts or model responses.
+- Retries can repeat a request if a server processed it but the response was lost; account for this if connecting to services that incur costs or side effects.
+- Provider-reported model capabilities are metadata, not proof of quality.
+- Model agreement is not verification.
+- Keep local inference endpoints private unless remote access is deliberately secured.
+- No arbitrary shell execution or automatic destructive file changes are enabled in this prototype.
 
 ## Documentation
 
