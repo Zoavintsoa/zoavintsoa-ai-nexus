@@ -264,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
             return _print_profiles(settings.provider)
         if args.command == "metrics":
             if args.clear:
-                count = store.clear_metrics()
+                count = store.clear_metrics(settings.provider)
                 print(f"Deleted {count} metric record(s).")
                 return 0
             return _print_metrics(settings.provider, args.json)
