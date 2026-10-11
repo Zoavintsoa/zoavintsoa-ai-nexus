@@ -309,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.out:
                 target = Path(args.out).expanduser()
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
                 print(f"Benchmark report saved: {target}")
             else:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
