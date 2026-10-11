@@ -8,7 +8,7 @@ AI Nexus coordinates separate inference engines so multiple models can contribut
 
 - Ollama provider with model discovery and detailed provider-reported metadata.
 - OpenAI-compatible provider adapter for compatible local inference servers.
-- Single-model requests, automatic model selection, and multi-model collaboration.
+- Single-model requests, automatic model selection using reported capabilities and comparable measured history, and multi-model collaboration.
 - Per-model latency reporting, visible failures, and fallback when synthesis fails.
 - Shared HTTP layer with bounded retries and request IDs.
 - Conservative memory-aware concurrency planning.
@@ -99,6 +99,7 @@ Benchmarking sends real prompts to the configured provider and consumes inferenc
 - `NEXUS_MAX_WORKERS`: parallel requests, bounded from 1 to 8.
 - `NEXUS_MEMORY_BUDGET_FRACTION`: fraction of available host memory reserved for heuristic planning, from 0.2 to 0.85.
 - `NEXUS_REQUEST_TIMEOUT`: per-request timeout in seconds, bounded from 1 to 600.
+- `NEXUS_MAX_OUTPUT_TOKENS`: maximum generated tokens per response, bounded from 1 to 32768 (default 2048).
 - `NEXUS_STATE_PATH`: optional path to the local SQLite state database.
 
 ## Resource and privacy limitations
