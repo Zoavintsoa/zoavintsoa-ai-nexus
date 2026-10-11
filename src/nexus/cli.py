@@ -254,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 export_session(args.session_out, args.prompt, settings.provider, models, payload)
                 print(f"Session exported: {Path(args.session_out).expanduser()}")
-            return 0
+            return 0 if any(item.succeeded for item in result.contributions) else 2
         if args.command == "profiles":
             if args.profiles_command == "sync":
                 profiles_data = _profile_dicts(client, settings.provider)
