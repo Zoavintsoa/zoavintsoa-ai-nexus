@@ -88,11 +88,11 @@ def execute_workflow(provider: Any, steps: list[WorkflowStep], max_workers: int 
             for future in as_completed(futures):
                 step = futures[future]
                 try:
-                    step_id, result, elapsed = future.result()
+                    step_id, result = future.result()
                     outputs[step_id] = result
-                    elapsed_seconds[step_id] = elapsed
+                    elapsed_seconds[step_id] = max(0.0, time.monotonic() - batch_started[step_id])
                 except Exception as exc:
                     errors[step.id] = str(exc)
-                    elapsed_seconds[step.id] = max(0.0, time.monotonic() - started) if "started" in locals() else 0.0
+                    elapsed_seconds[step.id] = max(0.0, time.monotonic() - batch_started[step.id])
                 remaining.pop(step.id, None)
     return WorkflowResult(outputs, errors, elapsed_seconds)
