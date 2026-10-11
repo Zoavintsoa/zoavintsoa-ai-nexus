@@ -49,6 +49,11 @@ class OllamaClient:
             raise ProviderError("Ollama model list has an unexpected format.")
         return [model for model in models if isinstance(model, dict)]
 
+    def show_model(self, model: str) -> dict:
+        if not model.strip():
+            raise ProviderError("Model name cannot be empty.")
+        return self._request("/api/show", {"model": model})
+
     def chat(self, model: str, prompt: str, system: str | None = None) -> str:
         if not model.strip():
             raise ProviderError("Model name cannot be empty.")
