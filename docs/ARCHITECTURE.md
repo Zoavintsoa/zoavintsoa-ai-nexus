@@ -4,37 +4,39 @@
 
 AI Nexus is a local-first orchestration layer, not a model-weight merger. Each inference engine remains responsible for running its model; Nexus routes work and combines results.
 
-## Current request flow
+## Request flow
 
-1. CLI validates the requested operation and reads environment settings.
-2. A provider adapter is selected: Ollama or an OpenAI-compatible local endpoint.
-3. A shared standard-library HTTP helper adds a request ID and retries only transient transport failures and retryable HTTP status codes with bounded backoff.
-4. The orchestrator runs independent contributions through a bounded worker pool.
-5. Each contribution records success/failure and elapsed time; failures remain visible.
-6. One successful model is asked to synthesize the contributions.
-7. The CLI prints each contribution, elapsed time, and synthesis.
+1. CLI validates arguments and reads environment settings.
+2. Provider adapter selects Ollama or a generic OpenAI-compatible local endpoint.
+3. Shared standard-library HTTP helper adds a request ID and retries only transient transport failures and retryable HTTP status codes with bounded backoff.
+4. The resource manager estimates memory from provider-reported model sizes and caps planned concurrency. Estimates are explicitly heuristic and do not measure VRAM.
+5. The orchestrator runs independent contributions through a bounded worker pool, preserving per-model failures and elapsed time.
+6. One successful model is asked to synthesize contributions. If synthesis fails, the failure is reported and raw contributions remain available.
+7. Optional SQLite telemetry records provider, model, task category, duration, and success flag. It never records prompts or answers.
+8. Explicit session export can save the user's task and outputs to a JSON file.
 
-## Current modules
+## Components
 
-- **Providers:** Ollama and a generic OpenAI-compatible API adapter.
-- **HTTP helper:** JSON encoding/decoding, request IDs, bounded retries, and sanitized warning logs.
-- **Inventory:** provider-reported Ollama model size, family, parameter size, quantization, and capabilities.
-- **Orchestrator:** bounded parallel collaboration, failure isolation, latency reporting, and synthesis.
+- **Providers:** Ollama and OpenAI-compatible API.
+- **HTTP helper:** JSON transport, request IDs, bounded retries, and warning logs without prompts/responses.
+- **Inventory and state:** provider metadata and local SQLite profile/metric store.
+- **Router:** keyword task classifier and transparent capability-based model selection.
+- **Resource manager:** conservative concurrency estimate using available host memory and model file sizes.
+- **Benchmark runner:** user-defined task/model combinations; reports latency and failures, not subjective quality.
+- **Workflow engine:** JSON steps with dependencies; independent ready steps run in parallel.
+- **Sessions:** explicit JSON export/import and schema validation.
 
-## Planned modules
+## State and privacy
 
-- **Capabilities:** persistent latency, context, modalities, memory footprint, and task-specific benchmark scores.
-- **Planner:** break larger jobs into explicit dependency graphs.
-- **Resource manager:** memory-aware model selection and concurrency.
-- **Verification:** deterministic tools, parsers, and source checking where available.
-- **Project memory:** persistent, inspectable project state with user-controlled retention.
-- **UI:** desktop interface after the CLI and APIs stabilize.
+Default state location: `~/.local/state/zoavintsoa-ai-nexus/state.sqlite3`, configurable using `NEXUS_STATE_PATH`. SQLite stores model profiles and aggregated run records only. It does not persist prompts or responses. Session export is opt-in and may contain prompts and full model outputs, so exported files should be treated as private.
 
-## Design constraints
+## Design constraints and known limitations
 
-- Avoid provider-specific logic in orchestration.
-- Bound parallel requests to reduce RAM/VRAM pressure; the current limit is a concurrency cap, not a memory estimator.
+- Keep provider-specific logic out of orchestration.
+- Bound parallel requests to reduce RAM/VRAM pressure; current estimates are not guarantees.
 - Keep model output labeled by source.
-- Do not equate majority agreement with truth.
-- Do not permit arbitrary shell execution or destructive file edits by default.
-- Do not log prompts, responses, or API keys.
+- Do not equate model agreement with truth.
+- Do not execute arbitrary shell commands or make destructive file edits.
+- Keyword routing is a baseline, not a semantic classifier.
+- OpenAI-compatible endpoints often omit model size/capabilities; those models may be serialized and use fallback routing.
+- No end-to-end behavior has been verified in this development pass because tests were intentionally not run.
