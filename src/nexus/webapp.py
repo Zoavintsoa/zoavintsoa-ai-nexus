@@ -6,6 +6,7 @@ import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import socket
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -20,6 +21,11 @@ from nexus.providers.openai_compatible import OpenAICompatibleClient
 
 UI_FILE = Path(__file__).with_name("ui") / "index.html"
 MAX_BODY_BYTES = 256 * 1024
+
+
+class IPv6ThreadingHTTPServer(ThreadingHTTPServer):
+    """Threaded HTTP server bound to IPv6 loopback when explicitly requested."""
+    address_family = socket.AF_INET6
 
 def make_client(settings: Settings) -> Any:
     if settings.provider == "openai-compatible":
@@ -230,7 +236,8 @@ def start_server(host: str = "127.0.0.1", port: int = 8765, open_browser: bool =
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("For security, the dashboard can only bind to this computer.")
     token = secrets.token_urlsafe(32)
-    server = ThreadingHTTPServer((host, port), create_handler(token))
+    server_class = IPv6ThreadingHTTPServer if host == "::1" else ThreadingHTTPServer
+    server = server_class((host, port), create_handler(token))
     server.daemon_threads = True
     server.nexus_token = token  # type: ignore[attr-defined]
     display_host = "[::1]" if host == "::1" else "127.0.0.1"
