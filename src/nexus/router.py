@@ -39,22 +39,27 @@ def route_task(prompt: str, profiles: list[dict[str, Any]],
     if not profiles:
         return RouteDecision(task, None, "No model profiles are available; specify a model explicitly.", ())
     if task in {"vision", "code", "reasoning", "writing"}:
-        capable = []
+        capable_profiles = []
         for profile in profiles:
             caps = profile.get("capabilities", [])
             caps = {str(cap).casefold() for cap in caps} if isinstance(caps, list) else set()
-            if task == "vision" and ({"vision", "image"} & caps):
-                capable.append(str(profile["name"]))
-            elif task == "code" and ({"code", "coding"} & caps):
-                capable.append(str(profile["name"]))
-            elif task == "reasoning" and ({"thinking", "reasoning"} & caps):
-                capable.append(str(profile["name"]))
-            elif task == "writing" and ({"completion", "text"} & caps):
-                capable.append(str(profile["name"]))
-        if capable:
+            matches = (
+                task == "vision" and bool({"vision", "image"} & caps)
+                or task == "code" and bool({"code", "coding"} & caps)
+                or task == "reasoning" and bool({"thinking", "reasoning"} & caps)
+                or task == "writing" and bool({"completion", "text"} & caps)
+            )
+            if matches and profile.get("name"):
+                capable_profiles.append(profile)
+        if capable_profiles:
+            sized = [p for p in capable_profiles
+                     if isinstance(p.get("size_bytes", p.get("size")), int)]
+            if sized:
+                capable_profiles = sorted(sized, key=lambda p: p.get("size_bytes", p.get("size")))
+            capable = tuple(str(p["name"]) for p in capable_profiles)
             return RouteDecision(task, capable[0],
-                                 f"Selected the first provider-reported model capability matching task type '{task}'.",
-                                 tuple(capable))
+                                 f"Selected a provider-reported capability matching task type '{task}', preferring the smallest known model.",
+                                 capable)
     # Stable fallback: choose the smallest known on-disk model, not by its name.
     sized = [(p.get("size_bytes", p.get("size")), str(p.get("name"))) for p in profiles
              if isinstance(p.get("size_bytes", p.get("size")), int) and p.get("name")]
