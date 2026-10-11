@@ -2,11 +2,12 @@
 
 ## Phase 0 — Foundation
 - [x] Python package and CLI structure
-- [x] Ollama connection and model discovery
-- [x] Single-model request
-- [x] Bounded multi-model collaboration
-- [x] Failure isolation and initial documentation
-- [x] Provider-reported model inventory and JSON export
+- [x] Ollama connection, discovery, and model metadata
+- [x] Single-model requests
+- [x] Bounded multi-model collaboration and failure isolation
+- [x] JSON inventory export
+- [x] OpenAI-compatible HTTP provider adapter
+- [x] Provider selection through environment configuration
 - [ ] Validate end-to-end behavior when testing is authorized
 
 ## Phase 1 — Reliability
@@ -15,9 +16,10 @@
 - [ ] Token/time budgets and cancellation
 - [ ] Better synthesis selection and fallback behavior
 - [ ] Consistent structured error reporting
+- [ ] Per-provider integration test suites
 
 ## Phase 2 — Model intelligence and resource awareness
-- [x] Read provider-reported model metadata
+- [x] Read provider-reported Ollama model metadata
 - [ ] Persist profiles between sessions
 - [ ] Measure latency and failure rates
 - [ ] Task-specific benchmark suite
@@ -31,8 +33,8 @@
 - [ ] Persist and resume long-running projects
 
 ## Phase 4 — More providers and interface
-- [ ] llama.cpp server adapter
-- [ ] OpenAI-compatible endpoint adapter
-- [ ] LocalAI evaluation
+- [x] Initial OpenAI-compatible endpoint adapter
+- [ ] Dedicated llama.cpp and LocalAI compatibility review
+- [ ] Additional providers as justified
 - [ ] Desktop UI
 - [ ] Import/export of project sessions
