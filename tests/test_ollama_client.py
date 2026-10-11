@@ -20,7 +20,7 @@ class FakeResponse:
 
 def test_chat_returns_message_content():
     client = OllamaClient()
-    with patch("nexus.providers.ollama.urlopen", return_value=FakeResponse({
+    with patch("nexus.http_client.urlopen", return_value=FakeResponse({
         "message": {"content": "  hello  "}
     })):
         assert client.chat("demo", "say hello") == "hello"
@@ -28,7 +28,7 @@ def test_chat_returns_message_content():
 
 def test_model_list():
     client = OllamaClient()
-    with patch("nexus.providers.ollama.urlopen", return_value=FakeResponse({
+    with patch("nexus.http_client.urlopen", return_value=FakeResponse({
         "models": [{"name": "demo:latest"}]
     })):
         assert client.list_models() == [{"name": "demo:latest"}]
