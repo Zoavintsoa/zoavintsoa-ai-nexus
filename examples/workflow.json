@@ -1,0 +1,21 @@
+{
+  "steps": [
+    {
+      "id": "outline",
+      "model": "qwen3-vl:8b",
+      "prompt": "Create a concise outline for a local-first AI orchestration project."
+    },
+    {
+      "id": "review",
+      "model": "qwen3-vl:8b",
+      "depends_on": ["outline"],
+      "prompt": "Critically review the supplied outline. Identify missing risks and improvements."
+    },
+    {
+      "id": "final",
+      "model": "qwen3-vl:8b",
+      "depends_on": ["outline", "review"],
+      "prompt": "Produce a revised outline using the preceding outputs. Explicitly preserve disagreements."
+    }
+  ]
+}
