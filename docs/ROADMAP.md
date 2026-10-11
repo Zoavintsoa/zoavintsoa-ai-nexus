@@ -23,9 +23,11 @@
 - [x] Routing using provider-reported capabilities and model-size fallback
 - [x] Conservative memory-based concurrency estimate
 - [x] User-defined latency benchmark runner
+- [x] Rank candidates by historical success rate and latency when comparable data exists
+- [x] Configurable maximum output-token budget per response
 - [ ] Measure actual RAM/VRAM usage during inference
 - [ ] Quality scoring with task-specific, reproducible criteria
-- [ ] More advanced routing based on historical outcomes and user-defined preferences
+- [ ] More advanced routing based on user-defined preferences and semantic task understanding
 
 ## Phase 3 — Workflow engine
 - [x] Declarative JSON workflows with dependency validation
