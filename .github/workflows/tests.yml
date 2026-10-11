@@ -36,3 +36,24 @@ jobs:
         run: pytest -q
       - name: Verify installed command-line entry point
         run: nexus --help
+
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install build frontend
+        run: python -m pip install --upgrade build
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Install built wheel
+        run: python -m pip install --force-reinstall dist/*.whl
+      - name: Verify installed package assets and entry points
+        run: |
+          python -c "from importlib.resources import files; p=files('nexus').joinpath('ui/index.html'); assert p.is_file(), 'Packaged dashboard HTML is missing'"
+          nexus --help
+          nexus-gui --help
