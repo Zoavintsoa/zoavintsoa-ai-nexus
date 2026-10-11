@@ -17,3 +17,11 @@ def test_metrics_store_aggregatable_metadata_without_prompts(tmp_path):
     assert row["successes"] == 1
     assert row["failures"] == 1
     assert row["avg_seconds"] == 2.0
+
+
+def test_clear_metrics_can_be_scoped_to_provider(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    store.record_run("ollama", "model-a", "code", 1.0, True)
+    store.record_run("compatible", "model-b", "code", 2.0, True)
+    assert store.clear_metrics("ollama") == 1
+    assert [row["provider"] for row in store.metrics()] == ["compatible"]
