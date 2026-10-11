@@ -47,8 +47,6 @@ def plan_resources(models: list[str], profiles: list[dict[str, Any]],
     warnings: list[str] = []
     known = [value for value in estimates.values() if value is not None]
     if any(value is None for value in estimates.values()):
-        warnings.append("Memory estimate unavailable for one or more models; using a conservative worker cap.")
-    if any(value is None for value in estimates.values()):
         recommended = 1
         warnings.append("At least one model has unknown size; concurrency is limited to one to reduce memory risk.")
     elif budget is None:
