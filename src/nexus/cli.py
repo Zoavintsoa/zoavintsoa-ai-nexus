@@ -202,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
             model = args.model
             if args.auto:
                 profiles_data = _profile_dicts(client, settings.provider)
-                decision = route_task(args.prompt, profiles_data)
+                decision = route_task(args.prompt, profiles_data, metrics=store.metrics(settings.provider))
                 if not decision.selected_model:
                     raise ValueError("Automatic routing could not select a model; use --model.")
                 model = decision.selected_model
@@ -270,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
             return _print_metrics(settings.provider, args.json)
         if args.command == "route":
             profiles_data = _profile_dicts(client, settings.provider)
-            decision = route_task(args.prompt, profiles_data, args.model)
+            decision = route_task(args.prompt, profiles_data, args.model, store.metrics(settings.provider))
             print(f"Task type: {decision.task_type}")
             print(f"Selected model: {decision.selected_model or 'none'}")
             print(f"Reason: {decision.reason}")
