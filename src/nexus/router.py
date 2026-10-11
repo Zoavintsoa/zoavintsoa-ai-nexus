@@ -54,8 +54,9 @@ def route_task(prompt: str, profiles: list[dict[str, Any]],
         if capable_profiles:
             sized = [p for p in capable_profiles
                      if isinstance(p.get("size_bytes", p.get("size")), int)]
+            unsized = [p for p in capable_profiles if p not in sized]
             if sized:
-                capable_profiles = sorted(sized, key=lambda p: p.get("size_bytes", p.get("size")))
+                capable_profiles = sorted(sized, key=lambda p: p.get("size_bytes", p.get("size"))) + unsized
             capable = tuple(str(p["name"]) for p in capable_profiles)
             return RouteDecision(task, capable[0],
                                  f"Selected a provider-reported capability matching task type '{task}', preferring the smallest known model.",
