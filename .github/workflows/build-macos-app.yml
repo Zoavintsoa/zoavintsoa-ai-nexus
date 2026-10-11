@@ -1,0 +1,25 @@
+name: Build macOS desktop app
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build app and DMG
+        run: sh scripts/build_macos_app.sh
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zoavintsoa-AI-Nexus-macOS
+          path: dist/Zoavintsoa-AI-Nexus-macOS.dmg
+          if-no-files-found: error
+          retention-days: 14
