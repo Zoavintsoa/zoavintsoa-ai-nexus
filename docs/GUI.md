@@ -21,7 +21,7 @@ The local API uses a per-process random token, requires that token on API reques
 
 The desktop shell uses pywebview to display the same local dashboard in a native window. Desktop build dependencies are optional and do not affect the standard-library web server.
 
-A macOS build runner can produce an app bundle and DMG using \`scripts/build_macos_app.sh\`. The GitHub Actions workflow named **Build macOS desktop app** is manual-only; it uploads the DMG as a short-lived workflow artifact. This prototype is not Apple-notarized or code-signed, so macOS may show a Gatekeeper warning. A public end-user release should be signed and notarized before distribution.
+A macOS build runner can produce an app bundle and DMG using \`scripts/build_macos_app.sh\`. The GitHub Actions workflow named **Build macOS desktop app** runs on pushes to `main` and can also be started manually; it uploads the DMG as a short-lived workflow artifact. This prototype is not Apple-notarized or code-signed, so macOS may show a Gatekeeper warning. A public end-user release should be signed and notarized before distribution.
 
 ## Current limitations
 
