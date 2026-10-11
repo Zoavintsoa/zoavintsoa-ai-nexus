@@ -11,8 +11,9 @@
 - [ ] Validate end-to-end behavior when testing is authorized
 
 ## Phase 1 — Reliability
-- [ ] Retry policy with backoff for transient failures
-- [ ] Structured logging and request IDs
+- [x] Bounded retry policy with backoff for transient failures
+- [x] Request IDs and warning logs that avoid prompt/response contents
+- [x] Per-model elapsed time in collaboration output
 - [ ] Token/time budgets and cancellation
 - [ ] Better synthesis selection and fallback behavior
 - [ ] Consistent structured error reporting
@@ -20,10 +21,10 @@
 
 ## Phase 2 — Model intelligence and resource awareness
 - [x] Read provider-reported Ollama model metadata
-- [ ] Persist profiles between sessions
-- [ ] Measure latency and failure rates
+- [ ] Persist profiles and telemetry between sessions
+- [x] Measure per-model latency for each collaboration
 - [ ] Task-specific benchmark suite
-- [ ] Estimate memory needs and avoid unsafe concurrent model loads
+- [ ] Estimate runtime memory needs before parallel model loads
 - [ ] Route tasks using measured capabilities rather than model-name assumptions
 
 ## Phase 3 — Workflow engine
