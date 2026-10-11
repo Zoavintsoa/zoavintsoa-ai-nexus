@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from nexus.config import Settings
+from nexus.benchmark import parse_benchmark, run_benchmark
 from nexus.errors import NexusError
 from nexus.inventory import inventory
 from nexus.orchestrator import Orchestrator
@@ -102,12 +103,18 @@ def _print_profiles(provider: str) -> int:
     return 0
 
 
-def _print_metrics(provider: str | None) -> int:
+def _print_metrics(provider: str | None, as_json: bool = False) -> int:
     rows = StateStore().metrics(provider)
     if not rows:
         print("No recorded model metrics yet. Run 'nexus ask' or 'nexus collaborate'.")
         return 0
-    print(json.dumps(rows, indent=2, ensure_ascii=False))
+    if as_json:
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+    else:
+        for row in rows:
+            print(f"{row['model']} | {row['task_type']} | runs={row['runs']} "
+                  f"| avg={row['avg_seconds']}s | success={row['successes']} "
+                  f"| failures={row['failures']} | last={row['last_run']}")
     return 0
 
 
@@ -119,7 +126,9 @@ def main(argv: list[str] | None = None) -> int:
     inventory_parser = sub.add_parser("inventory", help="Show provider-reported model metadata")
     inventory_parser.add_argument("--json", action="store_true", help="Output inventory as JSON")
     ask = sub.add_parser("ask", help="Ask one model")
-    ask.add_argument("--model", required=True)
+    model_choice = ask.add_mutually_exclusive_group(required=True)
+    model_choice.add_argument("--model", help="Exact model name")
+    model_choice.add_argument("--auto", action="store_true", help="Select a model using reported capabilities and metadata")
     ask.add_argument("--session-out", help="Optionally export this result to a JSON session")
     ask.add_argument("prompt")
     collab = sub.add_parser("collaborate", help="Ask several models and synthesize their contributions")
@@ -133,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     profiles_sub.add_parser("list", help="List saved model profiles")
 
     metrics = sub.add_parser("metrics", help="Show locally stored model performance metrics")
-    metrics.add_argument("--json", action="store_true", help="Output JSON (default format is JSON too)")
+    metrics.add_argument("--json", action="store_true", help="Output machine-readable JSON")
     metrics.add_argument("--clear", action="store_true", help="Delete recorded metrics")
     route = sub.add_parser("route", help="Explain automatic task-to-model routing")
     route.add_argument("--model", help="Explicit model override")
@@ -149,6 +158,10 @@ def main(argv: list[str] | None = None) -> int:
         command.add_argument("--file", required=True, help="Path to a workflow JSON file")
         if name == "run":
             command.add_argument("--session-out", help="Optionally export workflow output")
+
+    benchmark = sub.add_parser("benchmark", help="Run a user-defined latency benchmark across models")
+    benchmark.add_argument("--file", required=True, help="Path to benchmark JSON")
+    benchmark.add_argument("--out", help="Write complete benchmark results to a JSON file")
 
     session = sub.add_parser("session", help="Inspect an exported JSON session")
     session_sub = session.add_subparsers(dest="session_command", required=True)
@@ -185,17 +198,27 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "inventory":
             return _print_inventory(client, args.json)
         if args.command == "ask":
+            model = args.model
+            if args.auto:
+                profiles_data = _profile_dicts(client, settings.provider)
+                decision = route_task(args.prompt, profiles_data)
+                if not decision.selected_model:
+                    raise ValueError("Automatic routing could not select a model; use --model.")
+                model = decision.selected_model
+                print(f"Auto-selected model: {model} ({decision.reason})", file=sys.stderr)
+                if isinstance(client, OllamaClient):
+                    _store_profiles(settings.provider, profiles_data)
             started = time.monotonic()
             success = False
             result = ""
             try:
-                result = client.chat(args.model, args.prompt)
+                result = client.chat(model, args.prompt)
                 print(result)
                 success = True
             finally:
-                _record_run(settings.provider, args.model, args.prompt, time.monotonic() - started, success)
+                _record_run(settings.provider, model, args.prompt, time.monotonic() - started, success)
             if args.session_out:
-                export_session(args.session_out, args.prompt, settings.provider, [args.model],
+                export_session(args.session_out, args.prompt, settings.provider, [model],
                                {"answer": result})
                 print(f"Session exported: {Path(args.session_out).expanduser()}")
             return 0
@@ -243,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
                 count = store.clear_metrics()
                 print(f"Deleted {count} metric record(s).")
                 return 0
-            return _print_metrics(settings.provider)
+            return _print_metrics(settings.provider, args.json)
         if args.command == "route":
             profiles_data = _profile_dicts(client, settings.provider)
             decision = route_task(args.prompt, profiles_data, args.model)
@@ -266,6 +289,31 @@ def main(argv: list[str] | None = None) -> int:
                 "note": "Estimates are heuristic and do not measure GPU VRAM or guarantee safe loading.",
             }, indent=2, ensure_ascii=False))
             return 0
+        if args.command == "benchmark":
+            benchmark_data = json.loads(Path(args.file).expanduser().read_text(encoding="utf-8"))
+            tasks = parse_benchmark(benchmark_data)
+            results = run_benchmark(client, tasks)
+            for item in results:
+                _record_run(settings.provider, item["model"], next(
+                    task["prompt"] for task in tasks if task["id"] == item["task_id"]
+                ), item["elapsed_seconds"], item["succeeded"])
+            report = {
+                "provider": settings.provider,
+                "tasks": len(tasks),
+                "model_runs": len(results),
+                "succeeded": sum(1 for item in results if item["succeeded"]),
+                "failed": sum(1 for item in results if not item["succeeded"]),
+                "results": results,
+                "note": "Latency and success are measured; answer quality is not automatically scored.",
+            }
+            if args.out:
+                target = Path(args.out).expanduser()
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                print(f"Benchmark report saved: {target}")
+            else:
+                print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0 if report["failed"] == 0 else 2
         if args.command == "workflow":
             workflow_data = json.loads(Path(args.file).expanduser().read_text(encoding="utf-8"))
             steps = parse_workflow(workflow_data)
