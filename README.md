@@ -2,20 +2,22 @@
 
 **A local-first, multi-model AI orchestration platform by Zoavintsoa.**
 
-AI Nexus coordinates separate local inference engines so multiple models can contribute to one task, compare approaches, and produce a synthesis. It does not merge model weights.
+AI Nexus coordinates separate inference engines so multiple models can contribute to one task, compare approaches, and produce a synthesis. It does not merge model weights.
 
-## Current foundation
+## Included in this development build
 
-- Ollama provider with model discovery and provider-reported model metadata.
+- Ollama provider with model discovery and detailed provider-reported metadata.
 - OpenAI-compatible provider adapter for compatible local inference servers.
-- Single-model prompts and bounded multi-model collaboration.
-- Individual model failures remain visible; collaboration reports per-model elapsed time.
-- Shared JSON HTTP layer with request IDs and bounded retries for transient failures.
-- JSON export for the Ollama inventory.
-- CLI, documentation, and a manually triggered GitHub Actions workflow.
+- Single-model requests, automatic model selection, and multi-model collaboration.
+- Per-model latency reporting, visible failures, and fallback when synthesis fails.
+- Shared HTTP layer with bounded retries and request IDs.
+- Conservative memory-aware concurrency planning.
+- Persistent SQLite model profiles and run metrics.
+- User-defined model latency benchmarks.
+- JSON workflows with dependencies, plus explicit session export/import.
 - No runtime Python dependencies.
 
-> This is an early development prototype, not a production-ready autonomous agent. The latest changes have not been tested, as requested.
+> This remains an early prototype. The code and new regression tests have not been executed, as requested. Features are implemented in the repository but are not yet confirmed operational.
 
 ## Requirements
 
@@ -31,34 +33,62 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-## Ollama quick start
+## Core commands
 
 ```bash
 nexus doctor
 nexus models
 nexus inventory
 nexus inventory --json
+nexus profiles sync
+nexus profiles list
+nexus metrics
+nexus metrics --json
+nexus route "Analyze this image"
+nexus ask --auto "Analyze this image"
 nexus ask --model qwen3-vl:8b "Explain local AI orchestration."
 nexus collaborate --models qwen3-vl:8b,another-model:latest "Compare two project architectures."
+nexus resources --models qwen3-vl:8b,another-model:latest
 ```
 
 Replace example model names with the exact names printed by `nexus models`.
 
 ## OpenAI-compatible server
 
-Set these environment variables before running the CLI:
-
 ```bash
 export NEXUS_PROVIDER=openai-compatible
 export NEXUS_OPENAI_COMPAT_HOST=http://127.0.0.1:1234/v1
-# Set only if the server requires authentication:
+# Set only if required by the server:
 # export NEXUS_OPENAI_COMPAT_API_KEY=your-local-server-key
 nexus doctor
 nexus models
 nexus ask --model your-model-id "Hello"
 ```
 
-This adapter may work with compatible configurations of LM Studio, llama.cpp server, or LocalAI. Actual compatibility depends on the server and its enabled API endpoints.
+The adapter may work with compatible configurations of LM Studio, llama.cpp server, or LocalAI. Compatibility depends on the server and its enabled API endpoints.
+
+## Workflows
+
+An example dependency graph is provided in [examples/workflow.json](examples/workflow.json). Review and edit model names and prompts before execution.
+
+```bash
+nexus workflow plan --file examples/workflow.json
+nexus workflow run --file examples/workflow.json --session-out results/workflow-session.json
+nexus session show --file results/workflow-session.json
+```
+
+Independent steps can run concurrently; dependent steps receive previous outputs as untrusted context. A failed dependency blocks its downstream steps.
+
+## Benchmarks
+
+The [example benchmark](examples/benchmark.json) measures latency and success/failure for user-selected model/task pairs. It does not automatically judge answer quality.
+
+```bash
+nexus benchmark --file examples/benchmark.json --out results/benchmark.json
+nexus metrics
+```
+
+Benchmarking sends real prompts to the configured provider and consumes inference resources. Review the file before running it.
 
 ## Configuration
 
@@ -66,18 +96,16 @@ This adapter may work with compatible configurations of LM Studio, llama.cpp ser
 - `OLLAMA_HOST`: default `http://127.0.0.1:11434`.
 - `NEXUS_OPENAI_COMPAT_HOST`: default `http://127.0.0.1:1234/v1`.
 - `NEXUS_OPENAI_COMPAT_API_KEY`: optional key for compatible servers.
-- `NEXUS_MAX_WORKERS`: parallel model requests, bounded from 1 to 8.
+- `NEXUS_MAX_WORKERS`: parallel requests, bounded from 1 to 8.
+- `NEXUS_MEMORY_BUDGET_FRACTION`: fraction of available host memory reserved for heuristic planning, from 0.2 to 0.85.
 - `NEXUS_REQUEST_TIMEOUT`: per-request timeout in seconds, bounded from 1 to 600.
-- HTTP requests make up to three attempts for transient network errors, HTTP 408/425/429 and HTTP 5xx responses, with short exponential backoff. Ordinary client errors are not retried.
+- `NEXUS_STATE_PATH`: optional path to the local SQLite state database.
 
-## Reliability and security notes
+## Resource and privacy limitations
 
-- A request ID is sent with each HTTP request. Warning logs describe transient failures without recording prompts or model responses.
-- Retries can repeat a request if a server processed it but the response was lost; account for this if connecting to services that incur costs or side effects.
-- Provider-reported model capabilities are metadata, not proof of quality.
-- Model agreement is not verification.
-- Keep local inference endpoints private unless remote access is deliberately secured.
-- No arbitrary shell execution or automatic destructive file changes are enabled in this prototype.
+Memory estimates are heuristics based on model file sizes and do not measure GPU VRAM or guarantee safe loading. Unknown model sizes cause concurrency to be limited to one. OpenAI-compatible servers may not expose capabilities or model sizes.
+
+SQLite stores model profiles and performance metrics, not prompts or answers. Exported JSON sessions and benchmark reports can contain prompts and full model outputs; keep them private. The configured inference endpoint must be trusted. No arbitrary shell execution or automatic destructive file changes are enabled.
 
 ## Documentation
 
