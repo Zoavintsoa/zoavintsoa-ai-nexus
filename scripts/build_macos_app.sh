@@ -10,7 +10,7 @@ python3 -m pip install --upgrade ".[desktop]"
 python3 -m PyInstaller --noconfirm --clean --windowed \
   --name "Zoavintsoa AI Nexus" \
   --osx-bundle-identifier "com.zoavintsoa.ai-nexus" \
-  --add-data "src/nexus/ui:index.html" \
+  --add-data "src/nexus/ui:nexus/ui" \
   --paths src src/nexus/desktop.py
 APP="dist/Zoavintsoa AI Nexus.app"
 if [ ! -d "$APP" ]; then
