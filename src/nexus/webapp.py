@@ -66,9 +66,37 @@ def create_handler(token: str):
             if not isinstance(data, dict):
                 raise ValueError("Expected a JSON object.")
             return data
+        def _local_request(self) -> bool:
+            """Reject DNS-rebinding and cross-origin requests before serving secrets or actions."""
+            try:
+                host_header = self.headers.get("Host", "")
+                parsed_host = urlparse("//" + host_header)
+                hostname = (parsed_host.hostname or "").casefold()
+                port = parsed_host.port
+                expected_port = self.server.server_address[1]
+            except ValueError:
+                return False
+            if hostname not in {"127.0.0.1", "localhost", "::1"} or port != expected_port:
+                return False
+            origin = self.headers.get("Origin")
+            if origin:
+                try:
+                    parsed_origin = urlparse(origin)
+                    origin_host = (parsed_origin.hostname or "").casefold()
+                    origin_port = parsed_origin.port
+                except ValueError:
+                    return False
+                if (parsed_origin.scheme != "http"
+                        or origin_host not in {"127.0.0.1", "localhost", "::1"}
+                        or origin_port != expected_port):
+                    return False
+            return True
         def _authorized(self) -> bool:
             return secrets.compare_digest(self.headers.get("X-Nexus-Token", ""), token)
         def do_GET(self) -> None:
+            if not self._local_request():
+                self._json(421, {"error": "This dashboard accepts requests only from its local address."})
+                return
             path = urlparse(self.path).path
             if path == "/":
                 try:
@@ -117,6 +145,9 @@ def create_handler(token: str):
             except Exception as exc:
                 self._json(503, {"error": str(exc), "kind": type(exc).__name__})
         def do_POST(self) -> None:
+            if not self._local_request():
+                self._json(421, {"error": "This dashboard accepts requests only from its local address."})
+                return
             path = urlparse(self.path).path
             if not path.startswith("/api/"):
                 self._json(404, {"error": "Endpoint not found."})
@@ -182,10 +213,14 @@ def create_handler(token: str):
                 if path == "/api/metrics/clear":
                     return self._json(200, {"deleted": store.clear_metrics(settings.provider)})
                 self._json(404, {"error": "Unknown API endpoint."})
-            except (ValueError, OSError) as exc:
+            except ValueError as exc:
                 self._json(400, {"error": str(exc)})
+            except OSError:
+                self._json(503, {"error": "A local resource could not be accessed. Check the application configuration and file permissions."})
             except Exception as exc:
-                self._json(503, {"error": str(exc), "kind": type(exc).__name__})
+                # Do not send provider response bodies, local paths, or internal exception text to the browser.
+                self._json(503, {"error": "The request failed. Check that the configured AI provider is running and correctly configured.",
+                                 "kind": type(exc).__name__})
     return NexusHandler
 
 def start_server(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> ThreadingHTTPServer:
@@ -196,7 +231,8 @@ def start_server(host: str = "127.0.0.1", port: int = 8765, open_browser: bool =
     server = ThreadingHTTPServer((host, port), create_handler(token))
     server.daemon_threads = True
     server.nexus_token = token  # type: ignore[attr-defined]
-    server.nexus_url = f"http://127.0.0.1:{server.server_address[1]}/"  # type: ignore[attr-defined]
+    display_host = "[::1]" if host == "::1" else "127.0.0.1"
+    server.nexus_url = f"http://{display_host}:{server.server_address[1]}/"  # type: ignore[attr-defined]
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(server.nexus_url)).start()  # type: ignore[attr-defined]
     return server
