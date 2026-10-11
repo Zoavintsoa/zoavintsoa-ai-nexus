@@ -84,7 +84,10 @@ class StateStore:
         with self._connect() as db:
             return [dict(row) for row in db.execute(query, params).fetchall()]
 
-    def clear_metrics(self) -> int:
+    def clear_metrics(self, provider: str | None = None) -> int:
         with self._connect() as db:
-            cursor = db.execute("DELETE FROM run_metrics")
+            if provider:
+                cursor = db.execute("DELETE FROM run_metrics WHERE provider=?", (provider,))
+            else:
+                cursor = db.execute("DELETE FROM run_metrics")
             return cursor.rowcount
