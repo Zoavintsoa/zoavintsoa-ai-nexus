@@ -7,6 +7,7 @@ import sys
 
 from nexus.config import Settings
 from nexus.errors import NexusError
+from nexus.inventory import inventory
 from nexus.orchestrator import Orchestrator
 from nexus.providers.ollama import OllamaClient
 
@@ -29,11 +30,36 @@ def _print_models(client: OllamaClient) -> int:
     return 0
 
 
+def _print_inventory(client: OllamaClient, as_json: bool = False) -> int:
+    profiles = inventory(client)
+    if as_json:
+        print(json.dumps([profile.to_dict() for profile in profiles], indent=2, ensure_ascii=False))
+        return 0
+    if not profiles:
+        print("No Ollama models found. Pull a model with: ollama pull <model>")
+        return 0
+    for profile in profiles:
+        size = (
+            f"{profile.size_bytes / 1_000_000_000:.2f} GB"
+            if profile.size_bytes is not None else "size unknown"
+        )
+        print(f"\n{profile.name} — {size}")
+        print(f"  Family: {profile.family or 'unknown'}")
+        print(f"  Parameters: {profile.parameter_size or 'unknown'}")
+        print(f"  Quantization: {profile.quantization or 'unknown'}")
+        print("  Capabilities: " + (", ".join(profile.capabilities) if profile.capabilities else "not reported"))
+        if profile.details_error:
+            print(f"  Metadata warning: {profile.details_error}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="nexus", description="Zoavintsoa AI Nexus")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("doctor", help="Check connection to Ollama")
     sub.add_parser("models", help="List locally available Ollama models")
+    inventory_parser = sub.add_parser("inventory", help="Show provider-reported model metadata")
+    inventory_parser.add_argument("--json", action="store_true", help="Output inventory as JSON")
     ask = sub.add_parser("ask", help="Ask one local model")
     ask.add_argument("--model", required=True)
     ask.add_argument("prompt")
@@ -51,6 +77,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "models":
             return _print_models(client)
+        if args.command == "inventory":
+            return _print_inventory(client, args.json)
         if args.command == "ask":
             print(client.chat(args.model, args.prompt))
             return 0
