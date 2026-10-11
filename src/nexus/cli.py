@@ -26,9 +26,10 @@ from nexus.providers.openai_compatible import OpenAICompatibleClient
 def _client(settings: Settings) -> Any:
     if settings.provider == "openai-compatible":
         return OpenAICompatibleClient(
-            settings.compatible_host, settings.request_timeout, settings.compatible_api_key
+            settings.compatible_host, settings.request_timeout, settings.compatible_api_key,
+            settings.max_output_tokens,
         )
-    return OllamaClient(settings.ollama_host, settings.request_timeout)
+    return OllamaClient(settings.ollama_host, settings.request_timeout, settings.max_output_tokens)
 
 
 def _profile_dicts(client: Any, provider: str) -> list[dict[str, Any]]:
