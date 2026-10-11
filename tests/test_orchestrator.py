@@ -35,3 +35,10 @@ def test_duplicate_models_are_removed():
     provider = FakeProvider()
     result = Orchestrator(provider).collaborate(["alpha", "alpha"], "task")
     assert len(result.contributions) == 1
+
+
+def test_all_model_failures_are_preserved_in_result():
+    provider = FakeProvider()
+    result = Orchestrator(provider).collaborate(["broken"], "Explain testing")
+    assert not result.contributions[0].succeeded
+    assert "No successful model contributions" in result.synthesis
