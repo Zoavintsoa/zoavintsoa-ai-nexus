@@ -25,7 +25,7 @@ nexus-gui
 
 The server binds only to this computer (loopback). The dashboard API uses a random per-process token and does not expose an endpoint to the local network.
 
-A native macOS app bundle and DMG can be built by the manual GitHub Actions workflow **Build macOS desktop app**. It is not yet signed or notarized. GitHub Actions runs compilation checks, the test suite, and a CLI smoke test on pushes and pull requests targeting `main`.
+A native macOS app bundle and DMG can be built by the GitHub Actions workflow **Build macOS desktop app**, which runs on pushes and pull requests targeting `main` and can be started manually. The workflow runs the test suite before packaging and uploads the generated app and DMG as a temporary artifact. The app is not yet signed or notarized. The CI workflow runs compilation checks, the test suite, and CLI smoke tests on pushes and pull requests targeting `main`.
 
 ## Core capabilities
 

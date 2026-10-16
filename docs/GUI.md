@@ -27,4 +27,4 @@ A macOS build runner can produce an app bundle and DMG using \`scripts/build_mac
 
 - The UI currently reads the provider and endpoint from environment configuration. Editing provider endpoints, API keys, model downloads, and hardware-specific tuning in the UI are not yet supported.
 - The web UI cannot itself install Ollama or download model weights. A truly zero-setup installer must bundle or guide installation of a local inference engine and models; this is intentionally not done silently because model downloads are large and consume disk space.
-- No tests or build were run while adding this interface. The generated desktop package and UI behavior remain unverified until a later validation pass.
+- Automated validation is defined in GitHub Actions: the CI workflow runs the test suite and CLI smoke checks on Python 3.11, 3.12, and 3.13. The macOS packaging workflow runs the tests before creating an app bundle and DMG. A green workflow confirms those automated checks only; it does not replace manual testing of the packaged app on a user's Mac.
