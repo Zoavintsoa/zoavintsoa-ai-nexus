@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     name: Verify tests before packaging
-    runs-on: macos-14
+    runs-on: macos-15-intel
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -29,15 +29,17 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install package and test dependencies
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: Verify runner architecture
+        run: test "$(uname -m)" = "x86_64"
       - name: Compile Python sources
         run: python -m compileall -q src tests
       - name: Run test suite
         run: python -m pytest -q
 
   build:
-    name: Package app and DMG
+    name: Package Intel macOS app and DMG
     needs: test
-    runs-on: macos-14
+    runs-on: macos-15-intel
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -47,16 +49,19 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Verify runner architecture
+        run: test "$(uname -m)" = "x86_64"
       - name: Build macOS app and DMG
         run: sh scripts/build_macos_app.sh
       - name: Verify generated artifacts
         run: |
           test -d "dist/Zoavintsoa AI Nexus.app"
           test -s "dist/Zoavintsoa-AI-Nexus-macOS.dmg"
+          file "dist/Zoavintsoa AI Nexus.app/Contents/MacOS/Zoavintsoa AI Nexus" | grep -q "x86_64"
       - name: Upload macOS app and DMG
         uses: actions/upload-artifact@v4
         with:
-          name: Zoavintsoa-AI-Nexus-macOS
+          name: Zoavintsoa-AI-Nexus-macOS-Intel
           path: |
             dist/Zoavintsoa AI Nexus.app
             dist/Zoavintsoa-AI-Nexus-macOS.dmg
