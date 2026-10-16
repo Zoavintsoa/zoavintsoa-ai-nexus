@@ -7,7 +7,7 @@
 - [x] Single-model prompts and bounded multi-model collaboration
 - [x] JSON model inventory export
 - [x] Provider selection through environment configuration
-- [ ] End-to-end validation when testing is authorized
+- [ ] End-to-end provider validation with live Ollama and OpenAI-compatible test servers
 
 ## Phase 1 — Reliability
 - [x] Bounded retry policy with backoff for transient failures
@@ -42,5 +42,6 @@
 - [x] Initial OpenAI-compatible endpoint adapter
 - [ ] Dedicated llama.cpp and LocalAI compatibility review
 - [ ] Additional providers where useful
-- [ ] Desktop UI and project browser
+- [x] Initial dark local dashboard and macOS desktop wrapper implemented
+- [ ] Project browser
 - [ ] Session comparison and import/export UI
